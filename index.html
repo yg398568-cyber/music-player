@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>مشغل أغاني ياسر</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#1e1530;--panel:#2a1f42;--ink:#f2eeff;--mute:#a99bc9;--acc:#7fe3c4;--acc2:#c9b8ff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#1e1530}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Cairo',system-ui,sans-serif;min-height:100vh}
+.wrap{max-width:480px;margin:0 auto;padding:20px 18px 40px}
+h1{font-size:20px;font-weight:900;margin:0 0 18px;color:var(--acc2)}
+.disc{width:min(62vw,250px);aspect-ratio:1;margin:8px auto 18px;border-radius:50%;background:repeating-radial-gradient(circle at 50% 50%,#150e24 0 3px,#231a38 3px 6px);position:relative;box-shadow:0 0 0 6px var(--panel),0 18px 40px #0008;animation:spin 6s linear infinite;animation-play-state:paused}
+.disc.on{animation-play-state:running}
+.disc::after{content:"";position:absolute;inset:34%;border-radius:50%;background:radial-gradient(circle at 50% 50%,var(--bg) 0 12%,var(--acc) 13%);}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.disc{animation:none}}
+.title{text-align:center;font-weight:700;font-size:18px;min-height:30px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sub{text-align:center;color:var(--mute);font-size:13px;margin-bottom:14px}
+.bar{display:flex;align-items:center;gap:10px;direction:ltr;font-size:12px;color:var(--mute)}
+input[type=range]{flex:1;accent-color:var(--acc);height:28px}
+.ctl{display:flex;justify-content:center;align-items:center;gap:18px;margin:10px 0 18px;direction:ltr}
+button{font-family:inherit;cursor:pointer;border:0;color:var(--ink);background:var(--panel);border-radius:50%;width:48px;height:48px;font-size:18px}
+button:focus-visible,.add:focus-within{outline:3px solid var(--acc2);outline-offset:2px}
+#play{width:68px;height:68px;background:var(--acc);color:var(--bg);font-size:26px}
+button.act{background:var(--acc2);color:var(--bg)}
+.add{display:block;text-align:center;background:var(--panel);border:2px dashed var(--mute);border-radius:14px;padding:14px;font-weight:700;cursor:pointer;margin-bottom:14px}
+.add input{display:none}
+ul{list-style:none;margin:0;padding:0}
+li{display:flex;align-items:center;gap:10px;padding:12px 10px;border-radius:12px;cursor:pointer}
+li.cur{background:var(--panel);color:var(--acc)}
+li span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+li small{color:var(--mute)}
+.empty{text-align:center;color:var(--mute);padding:20px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>مشغل الأغاني</h1>
+  <div class="disc" id="disc"></div>
+  <div class="title" id="title">اختار أغانيك عشان نبدأ</div>
+  <div class="sub" id="sub">لسه مفيش أغاني</div>
+  <div class="bar"><span id="cur">0:00</span><input type="range" id="seek" min="0" max="100" value="0" step="0.1" aria-label="شريط التقدم"><span id="dur">0:00</span></div>
+  <div class="ctl">
+    <button id="shuf" aria-label="عشوائي">⤮</button>
+    <button id="next" aria-label="التالي">⏮</button>
+    <button id="play" aria-label="تشغيل">▶</button>
+    <button id="prev" aria-label="السابق">⏭</button>
+    <button id="rep" aria-label="تكرار">↻</button>
+  </div>
+  <label class="add"><input type="file" id="files" accept="audio/*" multiple>+ ضيف أغاني من جهازك</label>
+  <ul id="list"><li class="empty">القايمة فاضية</li></ul>
+</div>
+<script>
+const a=new Audio(),$=id=>document.getElementById(id);
+let q=[],i=-1,shuf=false,rep=false;
+const fmt=s=>isFinite(s)?Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0'):'0:00';
+function render(){
+  const l=$('list');
+  if(!q.length){l.innerHTML='<li class="empty">القايمة فاضية</li>';return}
+  l.innerHTML='';
+  q.forEach((t,n)=>{const li=document.createElement('li');if(n===i)li.className='cur';
+    li.innerHTML='<small>'+(n+1)+'</small><span></span>';li.querySelector('span').textContent=t.name;
+    li.onclick=()=>load(n,true);l.appendChild(li)});
+}
+function load(n,go){
+  if(n<0||n>=q.length)return;i=n;a.src=q[n].url;
+  $('title').textContent=q[n].name;$('sub').textContent='أغنية '+(n+1)+' من '+q.length;
+  render();if(go)a.play().catch(()=>{});
+  if('mediaSession' in navigator)navigator.mediaSession.metadata=new MediaMetadata({title:q[n].name});
+}
+function nxt(){if(!q.length)return;load(shuf?Math.floor(Math.random()*q.length):(i+1)%q.length,true)}
+function prv(){if(!q.length)return;if(a.currentTime>3){a.currentTime=0;return}load((i-1+q.length)%q.length,true)}
+$('files').onchange=e=>{
+  const was=q.length;
+  [...e.target.files].forEach(f=>q.push({name:f.name.replace(/\.[^.]+$/,''),url:URL.createObjectURL(f)}));
+  if(q.length&&i<0)load(0,true);else render();
+  e.target.value='';
+};
+$('play').onclick=()=>{if(i<0)return;a.paused?a.play():a.pause()};
+$('next').onclick=prv;$('prev').onclick=nxt;
+$('shuf').onclick=e=>{shuf=!shuf;e.currentTarget.classList.toggle('act',shuf)};
+$('rep').onclick=e=>{rep=!rep;e.currentTarget.classList.toggle('act',rep)};
+a.onplay=()=>{$('play').textContent='❚❚';$('disc').classList.add('on')};
+a.onpause=()=>{$('play').textContent='▶';$('disc').classList.remove('on')};
+a.onloadedmetadata=()=>$('dur').textContent=fmt(a.duration);
+a.ontimeupdate=()=>{$('cur').textContent=fmt(a.currentTime);if(a.duration)$('seek').value=a.currentTime/a.duration*100};
+$('seek').oninput=e=>{if(a.duration)a.currentTime=e.target.value/100*a.duration};
+a.onended=()=>{if(rep){a.currentTime=0;a.play()}else nxt()};
+if('mediaSession' in navigator){
+  navigator.mediaSession.setActionHandler('nexttrack',nxt);
+  navigator.mediaSession.setActionHandler('previoustrack',prv);
+}
+</script>
+</body>
+</html>
